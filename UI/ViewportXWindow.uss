@@ -1,0 +1,175 @@
+.prefab-preview-window {
+    flex-grow: 1;
+    flex-direction: column;
+    background-color: #2b2b2b;
+    color: #dcdcdc;
+    justify-content: space-between;
+    padding: 0;
+}
+
+.window-toolbar {
+    height: 20px;
+    flex-shrink: 1;
+    justify-content: space-between;
+}
+
+.preview-container {
+    flex-grow: 1;
+}
+
+.view-buttons {
+    flex-direction: row;
+    margin-bottom: 4px;
+}
+
+.view-buttons > Button {
+    flex-grow: 1;
+    height: 24px;
+    padding-left: 0;
+    padding-right: 0;
+    margin-right: 4px;
+}
+
+.view-buttons > Button:last-child {
+    margin-right: 0;
+}
+
+.view-button--active {
+    background-color: #4f8cff;
+    color: #ffffff;
+}
+
+.selection-label {
+    color: #f0f0f0;
+    font-size: 12px;
+}
+
+.flex-spacer {
+    flex-grow: 1;
+}
+
+.content {
+    flex-grow: 1;
+    flex-direction: row;
+    padding: 4px;
+}
+
+.content > * {
+    margin-right: 4px;
+}
+
+.content > *:last-child {
+    margin-right: 0;
+}
+
+.controls-panel {
+    flex-direction: row;
+    flex-grow: 0;
+    height: 24px;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    position: absolute;
+    bottom: 10px;
+    left: 10%;
+    right: 10%;
+    margin-bottom: 0;
+    border-radius: 4px;
+    background-color: rgb(140, 57, 57);
+}
+
+.control-button {
+    margin: 0;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    border-width: 0;
+    border-radius: 0;
+    flex-shrink: 0;
+}
+
+.view-button {
+    align-items: stretch;
+}
+
+.control-divider {
+    flex-shrink: 0;
+    width: 1px;
+    height: 16px;
+    margin: 0 4px;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.control-toggle {
+    margin: 0;
+}
+
+.section-title {
+    -unity-font-style: bold;
+    margin-bottom: 4px;
+}
+
+.preview-image {
+    flex-grow: 1;
+    background-color: #1e1e1e;
+    border-radius: 4px;
+}
+
+.preview-surface {
+    flex-grow: 1;
+}
+
+.status-label {
+    margin-top: 6px;
+    font-size: 11px;
+    color: #bbbbbb;
+}
+
+.info-text {
+    margin-bottom: 10px;
+    color: rgb(180, 180, 180);
+    -unity-text-align: middle-left;
+    white-space: normal;
+    font-size: 12px;
+}
+
+.link-button {
+    margin: 5px 0;
+    padding: 4px;
+    color: rgb(198, 255, 0);
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 1px;
+    border-color: rgb(198, 255, 0);
+    border-radius: 4px;
+}
+
+.link-button:hover {
+    background-color: rgb(198, 255, 0);
+    color: rgb(20, 20, 20);
+}
+
+.language-container {
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+.tools-label {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    color: rgb(180, 180, 180);
+    -unity-text-align: middle-left;
+    white-space: normal;
+    font-size: 12px;
+    -unity-font-style: bold;
+}
+
+.tool-introduction {
+    color: rgb(180, 180, 180);
+    font-size: 12px;
+    margin-top: 10px;
+}
+
+.settings-scroll {
+    flex-grow: 1;
+    min-height: 0;
+}

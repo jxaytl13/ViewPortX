@@ -1,0 +1,44 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
+    <ui:VisualElement class="prefab-preview-window" style="flex-grow: 1; justify-content: space-between; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0;">
+        <uie:Toolbar class="window-toolbar" style="height: 24px; flex-shrink: 1; justify-content: space-between; align-items: center; margin-left: 0; border-bottom-width: 0;">
+            <ui:Label name="selection-label" text="No prefab selected" class="selection-label" style="padding-right: 0; padding-left: 0; margin-left: 4px;" />
+            <ui:VisualElement name="Buttom" style="flex-direction: row; justify-content: flex-end; width: auto; flex-grow: 1; margin-right: 4px; margin-left: 100px; height: 24px; margin-top: 0; margin-bottom: 0; align-items: center;">
+                <ui:Button name="btn-play" text="P" style="margin-top: 0; margin-right: 2px; margin-bottom: 0; margin-left: 2px; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; width: 24px; height: 24px; border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0; background-color: rgb(88, 88, 88);" />
+                <ui:Button name="btn-restart" text="B" enable-rich-text="true" style="border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; margin-top: 0; margin-right: 2px; margin-bottom: 0; margin-left: 2px; width: 24px; height: 24px;" />
+                <ui:VisualElement name="DividingLine2" style="flex-shrink: 0; width: 1px; height: 16px; margin-right: 6px; margin-left: 6px; background-color: rgba(0, 0, 0, 0.5);" />
+                <ui:Toggle name="tgl-grid" style="align-items: center; justify-content: flex-start; margin-top: 0; margin-right: 2px; margin-bottom: 0; margin-left: 2px; width: 24px; height: 24px; flex-direction: column;" />
+                <ui:Toggle name="tgl-auto-rotate" style="flex-direction: column; height: 24px; width: 24px; margin-top: 0; margin-right: 2px; margin-bottom: 0; margin-left: 2px; align-items: center; justify-content: flex-start; flex-wrap: nowrap; flex-shrink: 0; flex-grow: 0;" />
+                <ui:Toggle name="tgl-lighting" tooltip="灯光" style="flex-direction: column; height: 24px; width: 24px; margin-top: 0; margin-right: 2px; margin-bottom: 0; margin-left: 2px; align-items: center; justify-content: flex-start; flex-wrap: nowrap; flex-shrink: 0; flex-grow: 0;" />
+                <ui:VisualElement name="DividingLine" style="flex-shrink: 0; width: 1px; height: 16px; margin-right: 6px; margin-left: 6px; background-color: rgba(0, 0, 0, 0.5);" />
+                <ui:Button name="btn-refresh" text="S" style="height: 24px; width: 24px; margin-top: 0; margin-right: 2px; margin-bottom: 0; margin-left: 2px; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0;" />
+                <ui:Button name="btn-reset" text="R" style="margin-top: 0; margin-right: 2px; margin-bottom: 0; margin-left: 2px; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; width: 24px; height: 24px; border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0;" />
+                <ui:Button name="btn-view-x" text="X" style="flex-shrink: 0; flex-grow: 0; align-items: stretch; margin-top: 0; margin-right: 2px; margin-bottom: 0; margin-left: 2px; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; width: 24px; height: 24px; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0; border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0;" />
+                <ui:Button name="btn-view-y" text="Y" style="margin-top: 0; margin-right: 2px; margin-bottom: 0; margin-left: 2px; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; width: 24px; height: 24px; border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0;" />
+                <ui:Button name="btn-view-z" text="Z" style="flex-shrink: 0; margin-top: 0; margin-right: 2px; margin-bottom: 0; margin-left: 2px; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; width: 24px; height: 24px; border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0;" />
+                <ui:Button name="btn-frame" text="D" style="border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0; margin-top: 0; margin-right: 2px; margin-bottom: 0; margin-left: 2px; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; width: 24px; height: 24px;" />
+                <ui:Button name="btn-settings" text="S" tooltip="设置" style="border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; border-bottom-left-radius: 0; margin-top: 0; margin-right: 0; margin-bottom: 0; margin-left: 2px; padding-top: 0; padding-right: 0; padding-bottom: 0; padding-left: 0; width: 24px; height: 24px;" />
+            </ui:VisualElement>
+        </uie:Toolbar>
+        <ui:VisualElement name="Preview" style="flex-grow: 1;">
+            <ui:Image name="preview-image" class="preview-image" style="flex-grow: 1;" />
+        </ui:VisualElement>
+        <ui:VisualElement name="settings-container" class="settings-overlay" style="display: none; transition-duration: 0.2s; position: absolute; left: 0; right: 0; top: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5); flex-grow: 1; justify-content: center; align-items: center; width: 100%; height: 100%;">
+            <ui:VisualElement name="settings-window" class="settings-window" style="position: relative; left: auto; top: auto; background-color: rgb(26, 26, 26); border-radius: 4px; min-width: 320px; min-height: auto; padding: 20px; width: 500px; flex-shrink: 0; height: 400px; right: auto; bottom: auto; flex-grow: 0; flex-direction: column;">
+                <ui:Label name="version-label" class="version-label" style="-unity-text-align: middle-left; flex-shrink: 0; height: 20px; flex-grow: 0;" />
+                <ui:Label name="author-label" class="info-text" style="-unity-text-align: middle-left; flex-shrink: 0; height: 20px; flex-grow: 0;" />
+                <ui:Button name="author-link-button" class="link-button button" style="flex-shrink: 0; height: 30px;" />
+                <ui:Button name="document-link-button" class="link-button button" style="flex-shrink: 0; height: 30px;" />
+                <ui:VisualElement class="language-container" style="justify-content: space-between; flex-direction: row; align-items: center; height: 30px; flex-shrink: 0;">
+                    <ui:Label name="language-label" text="Language:" style="min-width: 50px; -unity-text-align: middle-left; margin-right: 30px; height: 30px;" />
+                    <ui:DropdownField name="language-dropdown" style="flex-shrink: 1; flex-grow: 0; height: auto;" />
+                </ui:VisualElement>
+                <ui:ScrollView name="settings-scroll" class="settings-scroll" style="flex-grow: 1; min-height: 0;">
+                    <ui:Label name="config-title-label" class="tools-label" />
+                    <ui:Label name="config-path-label" class="tool-introduction" style="white-space: normal;" />
+                    <ui:Label name="tools-label" class="tools-label" />
+                    <ui:Label name="tool-introduction-label" class="tool-introduction" style="white-space: normal; -unity-text-align: upper-left;" />
+                </ui:ScrollView>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
