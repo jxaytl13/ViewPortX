@@ -338,8 +338,6 @@ namespace PrefabPreviewer
 
         private const string AboutVersion = "1.0.0";
         private const string AboutAuthor = "T·L";
-        private const string AboutAuthorLink = "https://jxaytl13.github.io";
-        private const string AboutDocumentLink = "https://f9p2icbxkc.feishu.cn/wiki/space/7448180894793728019?ccm_open_type=lark_wiki_spaceLink&open_tab_from=wiki_home";
         private const string LanguagePrefsKey = "PrefabPreviewer_UiLanguage";
         private UiLanguage _uiLanguage = UiLanguage.Chinese;
 
@@ -672,8 +670,6 @@ namespace PrefabPreviewer
             _settingsOverlay = new ViewportXSettingsOverlay(
                 AboutVersion,
                 AboutAuthor,
-                AboutAuthorLink,
-                AboutDocumentLink,
                 ViewportXLocalization.Get(ViewportXLocalization.Key.SettingsToolIntroduction, true),
                 ViewportXLocalization.Get(ViewportXLocalization.Key.SettingsToolIntroduction, false),
                 GetConfigFilePath,

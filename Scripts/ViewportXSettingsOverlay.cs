@@ -62,8 +62,8 @@ namespace PrefabPreviewer
 
         private readonly string _aboutVersion;
         private readonly string _aboutAuthor;
-        private readonly string _aboutAuthorLink;
-        private readonly string _aboutDocumentLink;
+        private const string AboutAuthorLink = "https://jxaytl13.github.io";
+        private const string AboutDocumentLink = "https://f9p2icbxkc.feishu.cn/wiki/space/7448180894793728019?ccm_open_type=lark_wiki_spaceLink&open_tab_from=wiki_home";
 
         private readonly string _toolIntroductionZh;
         private readonly string _toolIntroductionEn;
@@ -80,8 +80,6 @@ namespace PrefabPreviewer
         public ViewportXSettingsOverlay(
             string aboutVersion,
             string aboutAuthor,
-            string aboutAuthorLink,
-            string aboutDocumentLink,
             string toolIntroductionZh,
             string toolIntroductionEn,
             Func<string> getConfigPath,
@@ -91,8 +89,6 @@ namespace PrefabPreviewer
         {
             _aboutVersion = aboutVersion;
             _aboutAuthor = aboutAuthor;
-            _aboutAuthorLink = aboutAuthorLink;
-            _aboutDocumentLink = aboutDocumentLink;
             _toolIntroductionZh = toolIntroductionZh;
             _toolIntroductionEn = toolIntroductionEn;
             _getConfigPath = getConfigPath;
@@ -137,10 +133,10 @@ namespace PrefabPreviewer
 
             // 链接按钮
             _authorLinkButton = CreateLinkButton();
-            _authorLinkButton.clicked += () => Application.OpenURL(_aboutAuthorLink);
+            _authorLinkButton.clicked += () => Application.OpenURL(AboutAuthorLink);
 
             _documentLinkButton = CreateLinkButton();
-            _documentLinkButton.clicked += () => Application.OpenURL(_aboutDocumentLink);
+            _documentLinkButton.clicked += () => Application.OpenURL(AboutDocumentLink);
 
             // 语言行
             var languageRow = new VisualElement();
