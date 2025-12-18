@@ -17,7 +17,7 @@ namespace PrefabPreviewer
 {
     public class ViewportXWindow : EditorWindow
     {
-        private const string MenuPath = "Window/TBooox/ViewportX";
+        private const string MenuPath = "Window/T·L Nexus/ViewportX";
         private const string UxmlGuid = "da9ded1f94a3b464abaefea0b9f7c365";
         private const string UssGuid = "784c8e8d65cde5540a8e61ae40dfa81a";
         private const float PerspectiveFieldOfView = 60f;

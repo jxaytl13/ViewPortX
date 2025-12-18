@@ -368,7 +368,7 @@ namespace PrefabPreviewer
             var button = new Button();
 
             // 默认样式
-            var accent = new Color(198f / 255f, 255f / 255f, 0f / 255f, 1f);
+            var accent = new Color(57f / 255f, 209f / 255f, 157f / 255f, 1f);
             var dark = new Color(20f / 255f, 20f / 255f, 20f / 255f, 1f);
 
             button.style.height = 30;
