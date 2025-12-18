@@ -168,6 +168,7 @@ namespace PrefabPreviewer
             _languageDropdown.style.width = LanguageDropdownWidth;
             _languageDropdown.style.minWidth = LanguageDropdownWidth;
             _languageDropdown.style.maxWidth = LanguageDropdownWidth;
+            ConfigureDropdownField(_languageDropdown);
             _languageDropdown.RegisterValueChangedCallback(evt =>
             {
                 // DropdownField 的值本身就是字符串，这里用“是否中文”做统一出口。
@@ -361,6 +362,153 @@ namespace PrefabPreviewer
             label.style.fontSize = 12;
             label.style.marginTop = 10;
             return label;
+        }
+
+        private static void ConfigureDropdownField(DropdownField dropdown)
+        {
+            var accentBorder = new Color(57f / 255f, 209f / 255f, 157f / 255f, 1f);
+            var hoverCallbacksRegistered = false;
+
+            var borderTargets = new System.Collections.Generic.List<VisualElement>();
+            var defaultBorderColors = new System.Collections.Generic.Dictionary<VisualElement, Color[]>();
+
+            void AddBorderTarget(VisualElement element)
+            {
+                if (element == null)
+                {
+                    return;
+                }
+
+                if (!borderTargets.Contains(element))
+                {
+                    borderTargets.Add(element);
+                }
+
+                if (!defaultBorderColors.ContainsKey(element))
+                {
+                    defaultBorderColors[element] = new[]
+                    {
+                        element.resolvedStyle.borderTopColor,
+                        element.resolvedStyle.borderRightColor,
+                        element.resolvedStyle.borderBottomColor,
+                        element.resolvedStyle.borderLeftColor
+                    };
+                }
+            }
+
+            void RefreshBorderTargets()
+            {
+                borderTargets.Clear();
+
+                void CollectBorderTargets(VisualElement element)
+                {
+                    if (element == null)
+                    {
+                        return;
+                    }
+
+                    if (element.resolvedStyle.borderTopWidth > 0
+                        || element.resolvedStyle.borderRightWidth > 0
+                        || element.resolvedStyle.borderBottomWidth > 0
+                        || element.resolvedStyle.borderLeftWidth > 0)
+                    {
+                        AddBorderTarget(element);
+                    }
+
+                    foreach (var child in element.hierarchy.Children())
+                    {
+                        CollectBorderTargets(child);
+                    }
+                }
+
+                CollectBorderTargets(dropdown);
+            }
+
+            void ApplyHoverBorder(bool hover)
+            {
+                RefreshBorderTargets();
+
+                foreach (var target in borderTargets)
+                {
+                    if (target == null)
+                    {
+                        continue;
+                    }
+
+                    if (hover)
+                    {
+                        target.style.borderTopColor = accentBorder;
+                        target.style.borderRightColor = accentBorder;
+                        target.style.borderBottomColor = accentBorder;
+                        target.style.borderLeftColor = accentBorder;
+                        continue;
+                    }
+
+                    if (defaultBorderColors.TryGetValue(target, out var colors) && colors != null && colors.Length == 4)
+                    {
+                        target.style.borderTopColor = colors[0];
+                        target.style.borderRightColor = colors[1];
+                        target.style.borderBottomColor = colors[2];
+                        target.style.borderLeftColor = colors[3];
+                    }
+                }
+            }
+
+            void ApplyInternalStyles()
+            {
+                var inputElement = dropdown.Q<VisualElement>(className: "unity-base-field__input")
+                                   ?? dropdown.Q<VisualElement>(className: "unity-base-popup-field__input")
+                                   ?? dropdown.Q<VisualElement>(className: "unity-popup-field__input");
+
+                if (inputElement != null)
+                {
+                    inputElement.style.minWidth = 0;
+                    inputElement.style.flexGrow = 1;
+                    inputElement.style.flexShrink = 1;
+                    inputElement.style.flexBasis = 0;
+                    inputElement.style.borderTopWidth = 1;
+                    inputElement.style.borderRightWidth = 1;
+                    inputElement.style.borderBottomWidth = 1;
+                    inputElement.style.borderLeftWidth = 1;
+                    inputElement.style.borderTopLeftRadius = 4;
+                    inputElement.style.borderTopRightRadius = 4;
+                    inputElement.style.borderBottomLeftRadius = 4;
+                    inputElement.style.borderBottomRightRadius = 4;
+                    inputElement.style.paddingLeft = 3;
+                    inputElement.style.paddingRight = 3;
+                    inputElement.style.paddingTop = 3;
+                    inputElement.style.paddingBottom = 3;
+                    inputElement.style.marginLeft = 0;
+                    inputElement.style.marginRight = 0;
+                    inputElement.style.marginTop = 0;
+                    inputElement.style.marginBottom = 0;
+                    inputElement.style.backgroundColor = new Color(1f, 1f, 1f, 0.2f);
+                }
+
+                RefreshBorderTargets();
+
+                var text = dropdown.Q<VisualElement>(className: "unity-popup-field__text");
+                if (text != null)
+                {
+                    text.style.minWidth = 0;
+                    text.style.flexGrow = 1;
+                    text.style.flexShrink = 1;
+                    text.style.overflow = Overflow.Hidden;
+                    text.style.textOverflow = TextOverflow.Ellipsis;
+                }
+
+                if (!hoverCallbacksRegistered)
+                {
+                    hoverCallbacksRegistered = true;
+                    dropdown.RegisterCallback<PointerEnterEvent>(_ => ApplyHoverBorder(true), TrickleDown.TrickleDown);
+                    dropdown.RegisterCallback<PointerLeaveEvent>(_ => ApplyHoverBorder(false), TrickleDown.TrickleDown);
+                    dropdown.RegisterCallback<MouseEnterEvent>(_ => ApplyHoverBorder(true), TrickleDown.TrickleDown);
+                    dropdown.RegisterCallback<MouseLeaveEvent>(_ => ApplyHoverBorder(false), TrickleDown.TrickleDown);
+                }
+            }
+
+            dropdown.RegisterCallback<AttachToPanelEvent>(_ => ApplyInternalStyles());
+            dropdown.RegisterCallback<GeometryChangedEvent>(_ => ApplyInternalStyles());
         }
 
         private static Button CreateLinkButton()
