@@ -2,12 +2,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Rendering;
-using UnityEngine.UI;
 using UnityEngine.UIElements;
 
 using Button = UnityEngine.UIElements.Button;
@@ -1107,7 +1107,11 @@ namespace PrefabPreviewer
                 return;
             }
 
-            _previewUtility = new PreviewRenderUtility(true);
+            _previewUtility = TryCreatePreviewRenderUtility();
+            if (_previewUtility == null)
+            {
+                return;
+            }
             _previewUtility.camera.nearClipPlane = 0.01f;
             _previewUtility.camera.farClipPlane = 500f;
             _previewUtility.camera.fieldOfView = PerspectiveFieldOfView;
@@ -1115,10 +1119,18 @@ namespace PrefabPreviewer
             _previewUtility.camera.backgroundColor = new Color(0.13f, 0.13f, 0.13f, 1f);
             _previewUtility.camera.transform.position = new Vector3(0, 0, -5f);
             _previewUtility.camera.transform.rotation = Quaternion.identity;
-            _previewUtility.lights[0].intensity = 1.3f;
-            _previewUtility.lights[0].transform.rotation = Quaternion.Euler(50f, 50f, 0f);
-            _previewUtility.lights[1].intensity = 0.8f;
-            _previewUtility.lights[1].transform.rotation = Quaternion.Euler(340f, 218f, 177f);
+
+            if (_previewUtility.lights != null && _previewUtility.lights.Length > 0 && _previewUtility.lights[0] != null)
+            {
+                _previewUtility.lights[0].intensity = 1.3f;
+                _previewUtility.lights[0].transform.rotation = Quaternion.Euler(50f, 50f, 0f);
+            }
+
+            if (_previewUtility.lights != null && _previewUtility.lights.Length > 1 && _previewUtility.lights[1] != null)
+            {
+                _previewUtility.lights[1].intensity = 0.8f;
+                _previewUtility.lights[1].transform.rotation = Quaternion.Euler(340f, 218f, 177f);
+            }
             ApplyLightingState();
         }
 
@@ -1252,7 +1264,7 @@ namespace PrefabPreviewer
                 return PreviewContentType.None;
             }
 
-            if (root.GetComponentInChildren<Canvas>(true) != null || root.GetComponentInChildren<Graphic>(true) != null)
+            if (root.GetComponentInChildren<Canvas>(true) != null)
             {
                 return PreviewContentType.UGUI;
             }
@@ -1276,13 +1288,29 @@ namespace PrefabPreviewer
         {
             CleanupUiRoot();
 
+            var components = new List<Type>
+            {
+                typeof(RectTransform),
+                typeof(Canvas)
+            };
+
+            // Optional (UGUI package). Keep ViewportX loadable even if UnityEngine.UI is not present.
+            var canvasScalerType = Type.GetType("UnityEngine.UI.CanvasScaler, UnityEngine.UI");
+            if (canvasScalerType != null)
+            {
+                components.Add(canvasScalerType);
+            }
+
+            var graphicRaycasterType = Type.GetType("UnityEngine.UI.GraphicRaycaster, UnityEngine.UI");
+            if (graphicRaycasterType != null)
+            {
+                components.Add(graphicRaycasterType);
+            }
+
             var canvasGo = EditorUtility.CreateGameObjectWithHideFlags(
                 "_UIPreviewCanvas",
                 HideFlags.HideAndDontSave,
-                typeof(RectTransform),
-                typeof(Canvas),
-                typeof(CanvasScaler),
-                typeof(GraphicRaycaster));
+                components.ToArray());
 
             if (_previewUtility != null)
             {
@@ -1299,9 +1327,7 @@ namespace PrefabPreviewer
             rect.sizeDelta = new Vector2(1920f, 1080f);
             rect.localScale = Vector3.one * 0.0025f;
 
-            var scaler = canvasGo.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
+            ApplyCanvasScalerSettings(canvasGo, new Vector2(1920, 1080));
 
             if (_previewInstance != null)
             {
@@ -2072,6 +2098,89 @@ namespace PrefabPreviewer
 
             DestroyImmediate(go);
             go = null;
+        }
+
+        private static PreviewRenderUtility TryCreatePreviewRenderUtility()
+        {
+            try
+            {
+                var type = typeof(PreviewRenderUtility);
+                var boolCtor = type.GetConstructor(
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                    binder: null,
+                    types: new[] { typeof(bool) },
+                    modifiers: null);
+                if (boolCtor != null)
+                {
+                    return (PreviewRenderUtility)boolCtor.Invoke(new object[] { true });
+                }
+
+                var defaultCtor = type.GetConstructor(
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                    binder: null,
+                    types: Type.EmptyTypes,
+                    modifiers: null);
+                if (defaultCtor != null)
+                {
+                    return (PreviewRenderUtility)defaultCtor.Invoke(null);
+                }
+            }
+            catch
+            {
+                // Swallow to keep the window functional even if PreviewRenderUtility changes across Unity versions.
+            }
+
+            return null;
+        }
+
+        private static void ApplyCanvasScalerSettings(GameObject canvasGo, Vector2 referenceResolution)
+        {
+            if (canvasGo == null)
+            {
+                return;
+            }
+
+            var canvasScalerType = Type.GetType("UnityEngine.UI.CanvasScaler, UnityEngine.UI");
+            if (canvasScalerType == null)
+            {
+                return;
+            }
+
+            Component scalerComponent;
+            try
+            {
+                scalerComponent = canvasGo.GetComponent(canvasScalerType);
+            }
+            catch
+            {
+                return;
+            }
+
+            if (scalerComponent == null)
+            {
+                return;
+            }
+
+            try
+            {
+                var scaleModeType = canvasScalerType.GetNestedType("ScaleMode", BindingFlags.Public | BindingFlags.NonPublic);
+                var uiScaleModeProp = canvasScalerType.GetProperty("uiScaleMode", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (scaleModeType != null && uiScaleModeProp != null && uiScaleModeProp.CanWrite)
+                {
+                    var value = Enum.Parse(scaleModeType, "ScaleWithScreenSize");
+                    uiScaleModeProp.SetValue(scalerComponent, value);
+                }
+
+                var referenceResolutionProp = canvasScalerType.GetProperty("referenceResolution", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (referenceResolutionProp != null && referenceResolutionProp.CanWrite)
+                {
+                    referenceResolutionProp.SetValue(scalerComponent, referenceResolution);
+                }
+            }
+            catch
+            {
+                // Ignore; CanvasScaler is optional.
+            }
         }
 
         private void UpdateCameraClipPlanes()
