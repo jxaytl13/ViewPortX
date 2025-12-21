@@ -39,13 +39,15 @@ namespace PrefabPreviewer
         private sealed class PrefabPreviewerConfig
         {
             public int uiLanguage = (int)UiLanguage.Chinese;
-            public int viewAxis = (int)ViewAxis.Z;
             public bool gridVisible = true;
             public bool lightingEnabled = true;
         }
 
         private void UpdateViewButtonsState()
         {
+            var prefabMode = _displayMode == PreviewDisplayMode.PrefabScene;
+            var sceneControls = prefabMode && _contentType != PreviewContentType.UGUI;
+
             void SetButtonState(Button button, ViewAxis axis)
             {
                 if (button == null)
@@ -53,7 +55,7 @@ namespace PrefabPreviewer
                     return;
                 }
 
-                if (_currentViewAxis == axis)
+                if (sceneControls && _currentViewAxis == axis)
                 {
                     button.AddToClassList("view-button--active");
                 }
@@ -83,37 +85,77 @@ namespace PrefabPreviewer
             SetButtonState(_viewXButton, ViewAxis.X);
             SetButtonState(_viewYButton, ViewAxis.Y);
             SetButtonState(_viewZButton, ViewAxis.Z);
-            SetToggleButtonState(_resetButton, _currentViewAxis == ViewAxis.None);
+            SetToggleButtonState(_resetButton, sceneControls && _currentViewAxis == ViewAxis.None);
+            SetToggleButtonState(_projectionButton, sceneControls && _usePerspectiveProjection);
 
-            SetToggleButtonState(_gridButton, _gridVisible);
-            SetToggleButtonState(_lightingButton, _lightingEnabled);
-            SetToggleButtonState(_autoRotateButton, _autoRotate);
+            SetToggleButtonState(_gridButton, sceneControls && _gridVisible);
+            SetToggleButtonState(_lightingButton, sceneControls && _lightingEnabled);
+            SetToggleButtonState(_autoRotateButton, sceneControls && _autoRotate);
 
+            UpdateProjectionButtonLabel();
             UpdateToolbarIcons();
+        }
+
+        private void UpdateProjectionButtonLabel()
+        {
+            if (_projectionButton == null)
+            {
+                return;
+            }
+
+            if (_iconPerspectiveN != null && _iconPerspectiveS != null)
+            {
+                _projectionButton.text = string.Empty;
+                return;
+            }
+
+            _projectionButton.text = _usePerspectiveProjection ? "P" : "O";
+        }
+
+        private void ToggleProjection()
+        {
+            _usePerspectiveProjection = !_usePerspectiveProjection;
+
+            if (_displayMode == PreviewDisplayMode.PrefabScene && _contentType != PreviewContentType.UGUI)
+            {
+                if (!_usePerspectiveProjection)
+                {
+                    UpdateOrthographicSizeForBounds();
+                }
+
+                var cam = _previewUtility?.camera;
+                if (cam != null)
+                {
+                    cam.orthographic = !_usePerspectiveProjection;
+                    if (cam.orthographic)
+                    {
+                        cam.orthographicSize = Mathf.Max(_orthographicSize, 0.01f);
+                    }
+                }
+
+                UpdateCameraClipPlanes();
+                _previewSurface?.MarkDirtyRepaint();
+            }
+
+            UpdateViewButtonsState();
+        }
+
+        private void UpdateOrthographicSizeForBounds()
+        {
+            var aspect = _previewSize.y > 0f ? _previewSize.x / _previewSize.y : 1f;
+            var horizontalExtent = Mathf.Max(_contentBounds.extents.x, _contentBounds.extents.z);
+            var required = Mathf.Max(_contentBounds.extents.y, horizontalExtent / Mathf.Max(aspect, 0.01f));
+            _orthographicSize = Mathf.Clamp(required * 1.05f, 0.01f, 20000f);
         }
 
         private void PersistViewAxis()
         {
-            if (_config == null)
-            {
-                return;
-            }
-
-            _config.viewAxis = (int)_currentViewAxis;
-            SaveConfig();
+            // View axis is intentionally not persisted; always default to Z on window creation.
         }
 
         private void LoadPersistedViewAxis()
         {
-            if (_config == null)
-            {
-                _currentViewAxis = ViewAxis.Z;
-                return;
-            }
-
-            _currentViewAxis = Enum.IsDefined(typeof(ViewAxis), _config.viewAxis)
-                ? (ViewAxis)_config.viewAxis
-                : ViewAxis.Z;
+            _currentViewAxis = ViewAxis.Z;
         }
 
         private void ToggleGridVisibility(bool visible)
@@ -343,6 +385,7 @@ namespace PrefabPreviewer
         private Button _autoRotateButton;
         private Button _gridButton;
         private Button _lightingButton;
+        private Button _projectionButton;
         private Button _playButton;
         private Button _restartButton;
         private Button _frameButton;
@@ -387,6 +430,8 @@ namespace PrefabPreviewer
         private Texture2D _iconYS;
         private Texture2D _iconZN;
         private Texture2D _iconZS;
+        private Texture2D _iconPerspectiveN;
+        private Texture2D _iconPerspectiveS;
 
         private bool _restartHovered;
         private bool _refreshHovered;
@@ -446,8 +491,7 @@ namespace PrefabPreviewer
                 {
                     uiLanguage = EditorPrefs.GetInt(LanguagePrefsKey, (int)UiLanguage.Chinese),
                     gridVisible = EditorPrefs.GetInt(GridPrefsKey, 1) == 1,
-                    lightingEnabled = EditorPrefs.GetInt(LightingPrefsKey, 1) == 1,
-                    viewAxis = EditorPrefs.HasKey(ViewAxisPrefsKey) ? EditorPrefs.GetInt(ViewAxisPrefsKey) : (int)ViewAxis.Z
+                    lightingEnabled = EditorPrefs.GetInt(LightingPrefsKey, 1) == 1
                 };
                 SaveConfig();
             }
@@ -506,7 +550,8 @@ namespace PrefabPreviewer
         private bool _windowIsVisible = true;
         private Vector3 _panOffset = Vector3.zero;
         private ViewAxis _currentViewAxis = ViewAxis.Z;
-        private const string ViewAxisPrefsKey = "PrefabPreviewer_ViewAxis";
+        private bool _usePerspectiveProjection = true;
+        private float _orthographicSize = 1.2f;
         private const string GridPrefsKey = "PrefabPreviewer_ShowGrid";
         private const string LightingPrefsKey = "PrefabPreviewer_Lighting";
         private bool _gridVisible = true;
@@ -579,6 +624,7 @@ namespace PrefabPreviewer
             if (_gridButton != null) _gridButton.tooltip = ViewportXLocalization.Get(ViewportXLocalization.Key.TooltipGrid, chinese);
             if (_autoRotateButton != null) _autoRotateButton.tooltip = ViewportXLocalization.Get(ViewportXLocalization.Key.TooltipAutoRotate, chinese);
             if (_lightingButton != null) _lightingButton.tooltip = ViewportXLocalization.Get(ViewportXLocalization.Key.TooltipLighting, chinese);
+            if (_projectionButton != null) _projectionButton.tooltip = ViewportXLocalization.Get(ViewportXLocalization.Key.TooltipProjection, chinese);
 
             if (_refreshButton != null) _refreshButton.tooltip = ViewportXLocalization.Get(ViewportXLocalization.Key.TooltipRefreshSelection, chinese);
             if (_resetButton != null) _resetButton.tooltip = ViewportXLocalization.Get(ViewportXLocalization.Key.TooltipResetView, chinese);
@@ -698,6 +744,7 @@ namespace PrefabPreviewer
             _gridButton = rootVisualElement.Q<Button>("btn-grid");
             _autoRotateButton = rootVisualElement.Q<Button>("btn-auto-rotate");
             _lightingButton = rootVisualElement.Q<Button>("btn-lighting");
+            _projectionButton = rootVisualElement.Q<Button>("btn-projection");
             _frameButton = rootVisualElement.Q<Button>("btn-frame");
             _resetButton = rootVisualElement.Q<Button>("btn-reset");
             _refreshButton = rootVisualElement.Q<Button>("btn-refresh");
@@ -720,6 +767,7 @@ namespace PrefabPreviewer
                 UpdateViewButtonsState();
                 _previewSurface?.MarkDirtyRepaint();
             });
+            _projectionButton?.RegisterCallback<ClickEvent>(_ => ToggleProjection());
 
             InitializeToolbarIcons(uxmlPath);
 
@@ -815,12 +863,15 @@ namespace PrefabPreviewer
             _iconYS = LoadToolbarIcon("Y_S.png");
             _iconZN = LoadToolbarIcon("Z_N.png");
             _iconZS = LoadToolbarIcon("Z_S.png");
+            _iconPerspectiveN = LoadToolbarIcon("Perspective_N.png");
+            _iconPerspectiveS = LoadToolbarIcon("Perspective_S.png");
 
             SetToolbarButtonBaseStyle(_playButton);
             SetToolbarButtonBaseStyle(_restartButton);
             SetToolbarButtonBaseStyle(_gridButton);
             SetToolbarButtonBaseStyle(_autoRotateButton);
             SetToolbarButtonBaseStyle(_lightingButton);
+            SetToolbarButtonBaseStyle(_projectionButton);
             SetToolbarButtonBaseStyle(_refreshButton);
             SetToolbarButtonBaseStyle(_resetButton);
             SetToolbarButtonBaseStyle(_viewXButton);
@@ -903,9 +954,12 @@ namespace PrefabPreviewer
 
         private void UpdateToolbarIcons()
         {
-            SetToolbarButtonIcon(_gridButton, _gridVisible ? _iconGridS : _iconGridN);
-            SetToolbarButtonIcon(_lightingButton, _lightingEnabled ? _iconLightS : _iconLightN);
-            SetToolbarButtonIcon(_autoRotateButton, _autoRotate ? _iconAutoRotateS : _iconAutoRotateN);
+            var sceneControls = _displayMode == PreviewDisplayMode.PrefabScene && _contentType != PreviewContentType.UGUI;
+
+            SetToolbarButtonIcon(_gridButton, sceneControls && _gridVisible ? _iconGridS : _iconGridN);
+            SetToolbarButtonIcon(_lightingButton, sceneControls && _lightingEnabled ? _iconLightS : _iconLightN);
+            SetToolbarButtonIcon(_autoRotateButton, sceneControls && _autoRotate ? _iconAutoRotateS : _iconAutoRotateN);
+            SetToolbarButtonIcon(_projectionButton, sceneControls && _usePerspectiveProjection ? _iconPerspectiveS : _iconPerspectiveN);
 
             var particlePlaying = _contentType == PreviewContentType.Particle && _particlePlaying;
             if (_playButton != null)
@@ -922,13 +976,13 @@ namespace PrefabPreviewer
             SetToolbarButtonIcon(_playButton, particlePlaying ? _iconPlayS : _iconPlayN);
             SetToolbarButtonIcon(_restartButton, _restartHovered ? _iconReplayS : _iconReplayN);
             SetToolbarButtonIcon(_refreshButton, _refreshHovered ? _iconBreakS : _iconBreakN);
-            SetToolbarButtonIcon(_resetButton, _currentViewAxis == ViewAxis.None ? _iconXyzS : _iconXyzN);
+            SetToolbarButtonIcon(_resetButton, sceneControls && _currentViewAxis == ViewAxis.None ? _iconXyzS : _iconXyzN);
             SetToolbarButtonIcon(_frameButton, _frameHovered ? _iconFocusS : _iconFocusN);
             SetToolbarButtonIcon(_settingsButton, _settingsHovered ? _iconSettingS : _iconSettingN);
 
-            SetToolbarButtonIcon(_viewXButton, _currentViewAxis == ViewAxis.X ? _iconXS : _iconXN);
-            SetToolbarButtonIcon(_viewYButton, _currentViewAxis == ViewAxis.Y ? _iconYS : _iconYN);
-            SetToolbarButtonIcon(_viewZButton, _currentViewAxis == ViewAxis.Z ? _iconZS : _iconZN);
+            SetToolbarButtonIcon(_viewXButton, sceneControls && _currentViewAxis == ViewAxis.X ? _iconXS : _iconXN);
+            SetToolbarButtonIcon(_viewYButton, sceneControls && _currentViewAxis == ViewAxis.Y ? _iconYS : _iconYN);
+            SetToolbarButtonIcon(_viewZButton, sceneControls && _currentViewAxis == ViewAxis.Z ? _iconZS : _iconZN);
         }
 
         private void RegisterPointerEvents()
@@ -1366,8 +1420,15 @@ namespace PrefabPreviewer
             var distance = Mathf.Max(_distance, 0.1f);
             var position = target - direction * distance;
 
-            _previewUtility.camera.orthographic = false;
-            _previewUtility.camera.fieldOfView = PerspectiveFieldOfView;
+            _previewUtility.camera.orthographic = !_usePerspectiveProjection;
+            if (_previewUtility.camera.orthographic)
+            {
+                _previewUtility.camera.orthographicSize = Mathf.Max(_orthographicSize, 0.01f);
+            }
+            else
+            {
+                _previewUtility.camera.fieldOfView = PerspectiveFieldOfView;
+            }
             _previewUtility.camera.transform.position = position;
             _previewUtility.camera.transform.LookAt(target);
         }
@@ -1418,6 +1479,14 @@ namespace PrefabPreviewer
             if (recenter)
             {
                 _panOffset = Vector3.zero;
+            }
+
+            if (!_usePerspectiveProjection && _contentType != PreviewContentType.UGUI)
+            {
+                UpdateOrthographicSizeForBounds();
+                UpdateCameraClipPlanes();
+                _previewSurface?.MarkDirtyRepaint();
+                return;
             }
 
             var radius = Mathf.Max(_contentBounds.extents.magnitude, 0.001f);
@@ -1490,8 +1559,16 @@ namespace PrefabPreviewer
             }
             else
             {
-                _distance *= 1f + delta;
-                _distance = Mathf.Clamp(_distance, 0.05f, 20000f);
+                if (!_usePerspectiveProjection)
+                {
+                    _orthographicSize *= 1f + delta;
+                    _orthographicSize = Mathf.Clamp(_orthographicSize, 0.01f, 20000f);
+                }
+                else
+                {
+                    _distance *= 1f + delta;
+                    _distance = Mathf.Clamp(_distance, 0.05f, 20000f);
+                }
             }
 
             _previewSurface?.MarkDirtyRepaint();
@@ -1916,6 +1993,7 @@ namespace PrefabPreviewer
         private void UpdateControlStates()
         {
             var prefabMode = _displayMode == PreviewDisplayMode.PrefabScene;
+            var sceneControls = prefabMode && _contentType != PreviewContentType.UGUI;
             _frameButton?.SetEnabled(prefabMode);
             _resetButton?.SetEnabled(prefabMode);
             var allowAutoRotate = prefabMode && _contentType != PreviewContentType.UGUI;
@@ -1925,9 +2003,17 @@ namespace PrefabPreviewer
                 _autoRotate = false;
                 UpdateViewButtonsState();
             }
+            _gridButton?.SetEnabled(sceneControls);
+            _lightingButton?.SetEnabled(sceneControls);
+            _projectionButton?.SetEnabled(sceneControls);
+            _viewXButton?.SetEnabled(sceneControls);
+            _viewYButton?.SetEnabled(sceneControls);
+            _viewZButton?.SetEnabled(sceneControls);
             var particleControls = prefabMode && _contentType == PreviewContentType.Particle;
             _restartButton?.SetEnabled(particleControls);
             _playButton?.SetEnabled(particleControls);
+
+            UpdateViewButtonsState();
         }
 
         private void ToggleParticleControlsVisibility()
@@ -2002,7 +2088,7 @@ namespace PrefabPreviewer
             }
 
             var target = _contentBounds.center + _panOffset;
-            var centerDistance = _contentType == PreviewContentType.UGUI
+            var centerDistance = (_contentType == PreviewContentType.UGUI || cam.orthographic)
                 ? Vector3.Distance(cam.transform.position, target)
                 : Mathf.Max(_distance, 0.1f);
             var radius = Mathf.Max(_contentBounds.extents.magnitude, 0.01f);
