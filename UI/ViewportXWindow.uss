@@ -22,7 +22,7 @@
     margin-bottom: 4px;
 }
 
-.view-buttons > Button {
+.view-buttons > .view-button {
     flex-grow: 1;
     height: 24px;
     padding-left: 0;
@@ -30,7 +30,7 @@
     margin-right: 4px;
 }
 
-.view-buttons > Button:last-child {
+.view-buttons > .view-button-last {
     margin-right: 0;
 }
 
@@ -58,7 +58,7 @@
     margin-right: 4px;
 }
 
-.content > *:last-child {
+.content > .content-last-child {
     margin-right: 0;
 }
 

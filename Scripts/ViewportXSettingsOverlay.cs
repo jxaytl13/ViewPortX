@@ -115,7 +115,7 @@ namespace PrefabPreviewer
 
             // -------- Dialog 样式（固定宽高 + 深色面板）--------
             _dialogRoot.style.flexDirection = FlexDirection.Column;
-            _dialogRoot.style.width = 500;
+            _dialogRoot.style.width = 400;
             _dialogRoot.style.height = 400;
             _dialogRoot.style.paddingLeft = 20;
             _dialogRoot.style.paddingRight = 20;
