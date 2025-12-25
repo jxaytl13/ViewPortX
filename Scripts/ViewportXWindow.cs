@@ -559,6 +559,7 @@ namespace PrefabPreviewer
         private GameObject _gridObject;
         private Mesh _gridMesh;
         private Material _gridMaterial;
+        private bool _uiBuilt;
 
         [MenuItem(MenuPath)]
         public static void ShowWindow()
@@ -580,6 +581,7 @@ namespace PrefabPreviewer
             EditorApplication.update += OnEditorUpdate;
             _lastUpdateTime = EditorApplication.timeSinceStartup;
             _windowIsVisible = true;
+            EnsureUiBuilt();
         }
 
         private void OnBecameVisible()
@@ -701,6 +703,22 @@ namespace PrefabPreviewer
         }
 
         public void CreateGUI()
+        {
+            EnsureUiBuilt();
+        }
+
+        private void EnsureUiBuilt()
+        {
+            if (_uiBuilt && rootVisualElement.childCount > 0)
+            {
+                return;
+            }
+
+            _uiBuilt = true;
+            BuildUi();
+        }
+
+        private void BuildUi()
         {
             rootVisualElement.Clear();
 
