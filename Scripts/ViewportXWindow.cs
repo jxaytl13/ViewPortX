@@ -1440,6 +1440,23 @@ namespace PrefabPreviewer
                 }
             }
 
+            // 缓存粒子系统（UGUI 内可能包含粒子特效）
+            CacheParticleSystems();
+
+            // 启动粒子播放
+            if (_particleSystems.Count > 0)
+            {
+                foreach (var ps in _particleSystems)
+                {
+                    if (ps != null)
+                    {
+                        ps.Simulate(0f, true, true, true);
+                        ps.Play(true);
+                    }
+                }
+                _particlePlaying = true;
+            }
+
             // 重置缩放和平移
             _uiZoom = 1f;
             _uiPanOffset = Vector2.zero;
@@ -1520,6 +1537,20 @@ namespace PrefabPreviewer
 
             switch (_displayMode)
             {
+                case PreviewDisplayMode.PrefabScene when _contentType == PreviewContentType.UGUI:
+                    // UGUI 预览：检查是否有粒子系统需要更新
+                    if (_particleSystems.Count > 0 && _particlePlaying)
+                    {
+                        foreach (var ps in _particleSystems)
+                        {
+                            if (ps != null)
+                            {
+                                ps.Simulate(delta, true, false, true);
+                            }
+                        }
+                        _previewSurface?.MarkDirtyRepaint();
+                    }
+                    break;
                 case PreviewDisplayMode.PrefabScene when _previewUtility != null:
                     var needsRepaint = false;
 
