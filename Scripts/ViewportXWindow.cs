@@ -1720,10 +1720,11 @@ namespace PrefabPreviewer
 
             if (_contentType == PreviewContentType.UGUI)
             {
-                // UGUI 使用独立的缩放系统
+                // UGUI 通过调整 Canvas 的 scaleFactor 实现缩放
                 var factor = 1f - delta;
                 _uiZoom *= factor;
-                _uiZoom = Mathf.Clamp(_uiZoom, 0.1f, 10f);
+                _uiZoom = Mathf.Clamp(_uiZoom, 0.1f, 5f);
+                ApplyUiZoom();
             }
             else
             {
@@ -1741,6 +1742,20 @@ namespace PrefabPreviewer
 
             _previewSurface?.MarkDirtyRepaint();
             UpdateCameraClipPlanes();
+        }
+
+        /// <summary>
+        /// 应用 UI 缩放到 Canvas
+        /// </summary>
+        private void ApplyUiZoom()
+        {
+            if (_uiCanvasRoot == null) return;
+
+            var canvas = _uiCanvasRoot.GetComponent<Canvas>();
+            if (canvas != null)
+            {
+                canvas.scaleFactor = _uiZoom;
+            }
         }
 
         private void CacheParticleSystems()
