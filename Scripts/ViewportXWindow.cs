@@ -5,7 +5,6 @@ using System.IO;
 using System.Reflection;
 using UnityEditor;
 using UnityEditor.SceneManagement;
-using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Rendering;
@@ -313,20 +312,20 @@ namespace PrefabPreviewer
             var extent = Mathf.Ceil(halfExtent / spacing) * spacing;
             var lineCount = Mathf.Clamp(Mathf.CeilToInt(extent / spacing), 1, 200);
 
-            var vertices = new List<Vector3>();
-            var colors = new List<Color>();
-            var indices = new List<int>();
+            _gridVertices.Clear();
+            _gridColors.Clear();
+            _gridIndices.Clear();
             var color = new Color(1f, 1f, 1f, 0.25f);
 
             void AddLine(Vector3 a, Vector3 b)
             {
-                var index = vertices.Count;
-                vertices.Add(a);
-                vertices.Add(b);
-                colors.Add(color);
-                colors.Add(color);
-                indices.Add(index);
-                indices.Add(index + 1);
+                var index = _gridVertices.Count;
+                _gridVertices.Add(a);
+                _gridVertices.Add(b);
+                _gridColors.Add(color);
+                _gridColors.Add(color);
+                _gridIndices.Add(index);
+                _gridIndices.Add(index + 1);
             }
 
             for (int i = -lineCount; i <= lineCount; i++)
@@ -337,9 +336,9 @@ namespace PrefabPreviewer
             }
 
             _gridMesh.Clear();
-            _gridMesh.SetVertices(vertices);
-            _gridMesh.SetColors(colors);
-            _gridMesh.SetIndices(indices, MeshTopology.Lines, 0);
+            _gridMesh.SetVertices(_gridVertices);
+            _gridMesh.SetColors(_gridColors);
+            _gridMesh.SetIndices(_gridIndices, MeshTopology.Lines, 0);
         }
 
         private void DisposeGridResources()
@@ -570,6 +569,9 @@ namespace PrefabPreviewer
         private GameObject _gridObject;
         private Mesh _gridMesh;
         private Material _gridMaterial;
+        private readonly List<Vector3> _gridVertices = new();
+        private readonly List<Color> _gridColors = new();
+        private readonly List<int> _gridIndices = new();
         private bool _uiBuilt;
         private Label _previewMessageLabel;
         private string _previewMessageCached;
