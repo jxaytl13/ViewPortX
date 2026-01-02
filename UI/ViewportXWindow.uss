@@ -129,10 +129,25 @@
     flex-grow: 1;
     background-color: #1e1e1e;
     border-radius: 4px;
+    position: relative;
+    overflow: hidden;
 }
 
 .preview-surface {
     flex-grow: 1;
+}
+
+.preview-message {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    padding: 8px;
+    color: #bbbbbb;
+    font-size: 12px;
+    -unity-text-align: middle-center;
+    white-space: normal;
 }
 
 .status-label {

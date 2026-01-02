@@ -135,7 +135,7 @@ namespace PrefabPreviewer
                 }
 
                 UpdateCameraClipPlanes();
-                _previewSurface?.MarkDirtyRepaint();
+                RequestPreviewRepaint();
             }
 
             UpdateViewButtonsState();
@@ -169,7 +169,7 @@ namespace PrefabPreviewer
             }
             UpdateGridState();
             UpdateViewButtonsState();
-            _previewSurface?.MarkDirtyRepaint();
+            RequestPreviewRepaint();
         }
 
         private void ToggleLighting(bool enabled)
@@ -182,7 +182,7 @@ namespace PrefabPreviewer
             }
             ApplyLightingState();
             UpdateViewButtonsState();
-            _previewSurface?.MarkDirtyRepaint();
+            RequestPreviewRepaint();
         }
 
         private void LoadPersistedGridVisibility()
@@ -571,12 +571,20 @@ namespace PrefabPreviewer
         private Mesh _gridMesh;
         private Material _gridMaterial;
         private bool _uiBuilt;
+        private Label _previewMessageLabel;
+        private string _previewMessageCached;
+        private bool _previewMessageVisible;
+        private bool _previewRepaintQueued;
+        private RenderTexture _prefabRenderTexture;
 
         [MenuItem(MenuPath)]
         public static void ShowWindow()
         {
-            var window = GetWindow<ViewportXWindow>();
-            window.titleContent = new GUIContent("ViewportX");
+            var window = GetWindow(typeof(ViewportXWindow), utility: false, title: "ViewportX", focus: true) as ViewportXWindow;
+            if (window == null)
+            {
+                return;
+            }
             window.minSize = new Vector2(600, 400);
             window.Show();
         }
@@ -764,7 +772,14 @@ namespace PrefabPreviewer
                 _previewHost.pickingMode = PickingMode.Position;
                 _previewHost.Add(_previewSurface);
             }
-            _previewSurface.drawHandler = DrawPreview;
+
+            _previewMessageLabel = new Label();
+            _previewMessageLabel.AddToClassList("preview-message");
+            _previewMessageLabel.pickingMode = PickingMode.Ignore;
+            _previewMessageLabel.style.display = DisplayStyle.None;
+            _previewHost?.Add(_previewMessageLabel);
+            _previewMessageCached = null;
+            _previewMessageVisible = false;
 
             _selectionLabel = rootVisualElement.Q<Label>("selection-label");
             _statusLabel = rootVisualElement.Q<Label>("status-label");
@@ -794,7 +809,7 @@ namespace PrefabPreviewer
             {
                 _autoRotate = !_autoRotate;
                 UpdateViewButtonsState();
-                _previewSurface?.MarkDirtyRepaint();
+                RequestPreviewRepaint();
             });
             _projectionButton?.RegisterCallback<ClickEvent>(_ => ToggleProjection());
 
@@ -840,6 +855,7 @@ namespace PrefabPreviewer
             _previewHost?.RegisterCallback<GeometryChangedEvent>(evt =>
             {
                 _previewSize = evt.newRect.size;
+                RequestPreviewRepaint();
             });
 
             UpdateSelectionLabel();
@@ -847,6 +863,93 @@ namespace PrefabPreviewer
             UpdateGridState();
             UpdateViewButtonsState();
             RefreshSelection();
+        }
+
+        private void SetPreviewMessage(string message)
+        {
+            if (_previewMessageLabel == null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrEmpty(message))
+            {
+                if (!_previewMessageVisible && string.IsNullOrEmpty(_previewMessageCached))
+                {
+                    return;
+                }
+
+                _previewMessageLabel.text = string.Empty;
+                _previewMessageLabel.style.display = DisplayStyle.None;
+                _previewMessageCached = null;
+                _previewMessageVisible = false;
+                return;
+            }
+
+            if (_previewMessageVisible && string.Equals(_previewMessageCached, message, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _previewMessageLabel.text = message;
+            _previewMessageLabel.style.display = DisplayStyle.Flex;
+            _previewMessageCached = message;
+            _previewMessageVisible = true;
+        }
+
+        private void RequestPreviewRepaint()
+        {
+            if (_previewSurface == null || _previewRepaintQueued)
+            {
+                return;
+            }
+
+            _previewRepaintQueued = true;
+            EditorApplication.delayCall += () =>
+            {
+                _previewRepaintQueued = false;
+                if (_previewSurface == null)
+                {
+                    return;
+                }
+
+                UpdatePreviewFrame(_previewSurface.contentRect);
+                _previewSurface.MarkDirtyRepaint();
+            };
+        }
+
+        private void ReleasePrefabRenderTexture()
+        {
+            if (_prefabRenderTexture == null)
+            {
+                return;
+            }
+
+            _prefabRenderTexture.Release();
+            DestroyImmediate(_prefabRenderTexture);
+            _prefabRenderTexture = null;
+        }
+
+        private RenderTexture EnsurePrefabRenderTexture(int width, int height)
+        {
+            width = Mathf.Max(width, 1);
+            height = Mathf.Max(height, 1);
+
+            if (_prefabRenderTexture != null && _prefabRenderTexture.width == width && _prefabRenderTexture.height == height)
+            {
+                return _prefabRenderTexture;
+            }
+
+            ReleasePrefabRenderTexture();
+
+            _prefabRenderTexture = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32)
+            {
+                name = "ViewportX_PrefabPreview",
+                antiAliasing = 1,
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            _prefabRenderTexture.Create();
+            return _prefabRenderTexture;
         }
 
         private void InitializeToolbarIcons(string uxmlPath)
@@ -1201,7 +1304,7 @@ namespace PrefabPreviewer
                 SetStatus(ViewportXLocalization.Key.StatusNoAsset);
                 ToggleParticleControlsVisibility(forceDisable: true);
                 UpdateControlStates();
-                _previewSurface?.MarkDirtyRepaint();
+                RequestPreviewRepaint();
                 return;
             }
 
@@ -1226,7 +1329,7 @@ namespace PrefabPreviewer
                     SetStatus(ViewportXLocalization.Key.StatusInstantiatePrefabFailed);
                     ToggleParticleControlsVisibility(forceDisable: true);
                     UpdateControlStates();
-                    _previewSurface?.MarkDirtyRepaint();
+                    RequestPreviewRepaint();
                     return;
                 }
 
@@ -1256,7 +1359,7 @@ namespace PrefabPreviewer
                 UpdateStatusText();
                 ToggleParticleControlsVisibility();
                 UpdateControlStates();
-                _previewSurface?.MarkDirtyRepaint();
+                RequestPreviewRepaint();
                 UpdateGridState();
                 return;
             }
@@ -1283,7 +1386,7 @@ namespace PrefabPreviewer
             }
 
             UpdateControlStates();
-            _previewSurface?.MarkDirtyRepaint();
+            RequestPreviewRepaint();
         }
 
         private PreviewContentType DetermineContentType(GameObject root)
@@ -1518,6 +1621,7 @@ namespace PrefabPreviewer
         {
             DestroyPreviewObject(ref _previewInstance);
             CleanupUiRoot();
+            ReleasePrefabRenderTexture();
             _particleSystems.Clear();
             _contentType = PreviewContentType.None;
             _displayMode = PreviewDisplayMode.None;
@@ -1550,7 +1654,7 @@ namespace PrefabPreviewer
                                 ps.Simulate(delta, true, false, true);
                             }
                         }
-                        _previewSurface?.MarkDirtyRepaint();
+                        RequestPreviewRepaint();
                     }
                     break;
                 case PreviewDisplayMode.PrefabScene when _previewUtility != null:
@@ -1574,40 +1678,132 @@ namespace PrefabPreviewer
 
                     if (needsRepaint)
                     {
-                        _previewSurface?.MarkDirtyRepaint();
+                        RequestPreviewRepaint();
                     }
                     break;
                 case PreviewDisplayMode.AssetPreview:
                     if (UpdateAssetPreviewTexture())
                     {
-                        _previewSurface?.MarkDirtyRepaint();
+                        RequestPreviewRepaint();
                     }
                     break;
             }
         }
 
-        private void DrawPreview(Rect rect)
+        private void UpdatePreviewFrame(Rect rect)
         {
             if (rect.width <= 0f || rect.height <= 0f)
             {
+                _previewSurface?.ClearFrame();
+                SetPreviewMessage(null);
                 return;
             }
 
             switch (_displayMode)
             {
                 case PreviewDisplayMode.PrefabScene:
-                    DrawPrefabScene(rect);
+                    UpdatePrefabFrame(rect);
                     break;
                 case PreviewDisplayMode.Texture:
-                    DrawTexturePreview(rect);
+                    UpdateTextureFrame();
                     break;
                 case PreviewDisplayMode.AssetPreview:
-                    DrawAssetPreview(rect);
+                    UpdateAssetPreviewFrame();
                     break;
                 default:
-                    DrawInfoMessage(rect, ViewportXLocalization.Get(ViewportXLocalization.Key.HintSelectPreviewableAsset, _uiLanguage == UiLanguage.Chinese));
+                    _previewSurface?.ClearFrame();
+                    SetPreviewMessage(ViewportXLocalization.Get(ViewportXLocalization.Key.HintSelectPreviewableAsset, _uiLanguage == UiLanguage.Chinese));
                     break;
             }
+        }
+
+        private void UpdatePrefabFrame(Rect rect)
+        {
+            if (_previewInstance == null)
+            {
+                _previewSurface?.ClearFrame();
+                SetPreviewMessage(ViewportXLocalization.Get(ViewportXLocalization.Key.HintSelectPrefab, _uiLanguage == UiLanguage.Chinese));
+                return;
+            }
+
+            if (_contentType == PreviewContentType.UGUI)
+            {
+                UpdateUguiFrame();
+                return;
+            }
+
+            if (_previewUtility == null)
+            {
+                _previewSurface?.ClearFrame();
+                SetPreviewMessage(ViewportXLocalization.Get(ViewportXLocalization.Key.PreviewRendererUnavailable, _uiLanguage == UiLanguage.Chinese));
+                return;
+            }
+
+            var cam = _previewUtility.camera;
+            if (cam == null)
+            {
+                _previewSurface?.ClearFrame();
+                SetPreviewMessage(ViewportXLocalization.Get(ViewportXLocalization.Key.PreviewRendererUnavailable, _uiLanguage == UiLanguage.Chinese));
+                return;
+            }
+
+            ConfigureCamera();
+            UpdatePreviewLightingForCamera();
+
+            var rt = EnsurePrefabRenderTexture(Mathf.RoundToInt(rect.width), Mathf.RoundToInt(rect.height));
+
+            var previousTargetTexture = cam.targetTexture;
+            cam.targetTexture = rt;
+            cam.aspect = rt.height > 0 ? rt.width / (float)rt.height : 1f;
+            cam.pixelRect = new Rect(0f, 0f, rt.width, rt.height);
+            cam.Render();
+            cam.targetTexture = previousTargetTexture;
+
+            _previewSurface?.SetFrame(rt, new Rect(0f, 0f, 1f, 1f), PreviewSurfaceElement.FitMode.ScaleToFit);
+            SetPreviewMessage(null);
+        }
+
+        private void UpdateUguiFrame()
+        {
+            if (_uiPreviewCamera == null || _uiCanvasRoot == null || _uiRenderTexture == null)
+            {
+                _previewSurface?.ClearFrame();
+                SetPreviewMessage(ViewportXLocalization.Get(ViewportXLocalization.Key.PreviewRendererUnavailable, _uiLanguage == UiLanguage.Chinese));
+                return;
+            }
+
+            Canvas.ForceUpdateCanvases();
+            _uiPreviewCamera.Render();
+
+            _previewSurface?.SetFrame(_uiRenderTexture, new Rect(0f, 0f, 1f, 1f), PreviewSurfaceElement.FitMode.ScaleToFit);
+            SetPreviewMessage(null);
+        }
+
+        private void UpdateTextureFrame()
+        {
+            if (_texturePreview == null)
+            {
+                _previewSurface?.ClearFrame();
+                SetPreviewMessage(ViewportXLocalization.Get(ViewportXLocalization.Key.HintTextureUnavailable, _uiLanguage == UiLanguage.Chinese));
+                return;
+            }
+
+            var uv = _textureHasCustomUv ? _textureUv : new Rect(0f, 0f, 1f, 1f);
+            _previewSurface?.SetFrame(_texturePreview, uv, PreviewSurfaceElement.FitMode.ScaleToFit);
+            SetPreviewMessage(null);
+        }
+
+        private void UpdateAssetPreviewFrame()
+        {
+            if (_assetPreviewTexture == null)
+            {
+                _previewSurface?.ClearFrame();
+                SetPreviewMessage(ViewportXLocalization.Get(ViewportXLocalization.Key.HintGeneratingPreview, _uiLanguage == UiLanguage.Chinese));
+                return;
+            }
+
+            _previewSurface?.SetFrame(_assetPreviewTexture, new Rect(0f, 0f, 1f, 1f), PreviewSurfaceElement.FitMode.ScaleToFit);
+            SetPreviewMessage(null);
         }
 
         private void ConfigureCamera()
@@ -1687,7 +1883,7 @@ namespace PrefabPreviewer
                     _uiZoom = 1f;
                     _uiPanOffset = Vector2.zero;
                 }
-                _previewSurface?.MarkDirtyRepaint();
+                RequestPreviewRepaint();
                 return;
             }
 
@@ -1702,7 +1898,7 @@ namespace PrefabPreviewer
             {
                 UpdateOrthographicSizeForBounds();
                 UpdateCameraClipPlanes();
-                _previewSurface?.MarkDirtyRepaint();
+                RequestPreviewRepaint();
                 return;
             }
 
@@ -1724,7 +1920,7 @@ namespace PrefabPreviewer
                 _distance = Mathf.Clamp(radius * 2.2f, 0.05f, 20000f);
             }
             UpdateCameraClipPlanes();
-            _previewSurface?.MarkDirtyRepaint();
+            RequestPreviewRepaint();
         }
 
         private void ResetView()
@@ -1752,7 +1948,7 @@ namespace PrefabPreviewer
 
             _orbitAngles.x = Mathf.Clamp(_orbitAngles.x + delta.y * 0.2f, -80f, 80f);
             _orbitAngles.y += delta.x * 0.2f;
-            _previewSurface?.MarkDirtyRepaint();
+            RequestPreviewRepaint();
         }
 
         private void Zoom(float delta)
@@ -1784,7 +1980,7 @@ namespace PrefabPreviewer
                 }
             }
 
-            _previewSurface?.MarkDirtyRepaint();
+            RequestPreviewRepaint();
             UpdateCameraClipPlanes();
         }
 
@@ -1947,7 +2143,7 @@ namespace PrefabPreviewer
             _currentViewAxis = axis;
             PersistViewAxis();
             UpdateViewButtonsState();
-            _previewSurface?.MarkDirtyRepaint();
+            RequestPreviewRepaint();
         }
 
         private void SetOrbitAnglesForAxis(ViewAxis axis)
@@ -2008,7 +2204,7 @@ namespace PrefabPreviewer
 
                     instanceRect.anchoredPosition += new Vector2(deltaX, deltaY);
                 }
-                _previewSurface?.MarkDirtyRepaint();
+                RequestPreviewRepaint();
                 return;
             }
 
@@ -2038,123 +2234,7 @@ namespace PrefabPreviewer
                          + (screenDelta.y / _previewSize.y) * viewHeight * up;
             _panOffset += offset;
 
-            _previewSurface?.MarkDirtyRepaint();
-        }
-
-        private void DrawPrefabScene(Rect rect)
-        {
-            if (_previewInstance == null)
-            {
-                DrawInfoMessage(rect, ViewportXLocalization.Get(ViewportXLocalization.Key.HintSelectPrefab, _uiLanguage == UiLanguage.Chinese));
-                return;
-            }
-
-            // UGUI 使用独立的渲染系统
-            if (_contentType == PreviewContentType.UGUI)
-            {
-                DrawUguiPreview(rect);
-                return;
-            }
-
-            if (_previewUtility == null)
-            {
-                DrawInfoMessage(rect, ViewportXLocalization.Get(ViewportXLocalization.Key.PreviewRendererUnavailable, _uiLanguage == UiLanguage.Chinese));
-                return;
-            }
-
-            ConfigureCamera();
-            UpdatePreviewLightingForCamera();
-            _previewUtility.BeginPreview(rect, GUIStyle.none);
-            _previewUtility.camera.Render();
-            var tex = _previewUtility.EndPreview();
-            GUI.DrawTexture(rect, tex, ScaleMode.StretchToFill, false);
-        }
-
-        /// <summary>
-        /// 绘制 UGUI 预览
-        /// 使用独立的 Camera + Canvas + RenderTexture 实现真正的 UI 渲染
-        /// </summary>
-        private void DrawUguiPreview(Rect rect)
-        {
-            if (_uiPreviewCamera == null || _uiCanvasRoot == null || _uiRenderTexture == null)
-            {
-                DrawInfoMessage(rect, ViewportXLocalization.Get(ViewportXLocalization.Key.PreviewRendererUnavailable, _uiLanguage == UiLanguage.Chinese));
-                return;
-            }
-
-            // 强制更新 Canvas
-            Canvas.ForceUpdateCanvases();
-
-            // 渲染
-            _uiPreviewCamera.Render();
-
-            // 计算绘制区域（保持 16:9 比例）
-            var sourceAspect = 1920f / 1080f;
-            var rectAspect = rect.width / rect.height;
-
-            Rect drawRect;
-            if (rectAspect > sourceAspect)
-            {
-                // 预览区域更宽，左右留空
-                var width = rect.height * sourceAspect;
-                drawRect = new Rect(rect.x + (rect.width - width) * 0.5f, rect.y, width, rect.height);
-            }
-            else
-            {
-                // 预览区域更高，上下留空
-                var height = rect.width / sourceAspect;
-                drawRect = new Rect(rect.x, rect.y + (rect.height - height) * 0.5f, rect.width, height);
-            }
-
-            // 绘制到预览区域
-            GUI.DrawTexture(drawRect, _uiRenderTexture, ScaleMode.StretchToFill, false);
-        }
-
-        private void DrawTexturePreview(Rect rect)
-        {
-            if (_texturePreview == null)
-            {
-                DrawInfoMessage(rect, ViewportXLocalization.Get(ViewportXLocalization.Key.HintTextureUnavailable, _uiLanguage == UiLanguage.Chinese));
-                return;
-            }
-
-            var uv = _textureHasCustomUv ? _textureUv : new Rect(0f, 0f, 1f, 1f);
-
-            var sourceWidth = Mathf.Max(_texturePreview.width * uv.width, 1f);
-            var sourceHeight = Mathf.Max(_texturePreview.height * uv.height, 1f);
-            var sourceAspect = sourceWidth / sourceHeight;
-            var rectAspect = rect.width / rect.height;
-
-            Rect drawRect;
-            if (rectAspect > sourceAspect)
-            {
-                var width = rect.height * sourceAspect;
-                drawRect = new Rect(rect.x + (rect.width - width) * 0.5f, rect.y, width, rect.height);
-            }
-            else
-            {
-                var height = rect.width / sourceAspect;
-                drawRect = new Rect(rect.x, rect.y + (rect.height - height) * 0.5f, rect.width, height);
-            }
-
-            GUI.DrawTextureWithTexCoords(drawRect, _texturePreview, uv, true);
-        }
-
-        private void DrawAssetPreview(Rect rect)
-        {
-            if (_assetPreviewTexture == null)
-            {
-                DrawInfoMessage(rect, ViewportXLocalization.Get(ViewportXLocalization.Key.HintGeneratingPreview, _uiLanguage == UiLanguage.Chinese));
-                return;
-            }
-
-            GUI.DrawTexture(rect, _assetPreviewTexture, ScaleMode.ScaleToFit, true);
-        }
-
-        private static void DrawInfoMessage(Rect rect, string message)
-        {
-            EditorGUI.DrawRect(rect, new Color(0.1f, 0.1f, 0.1f, 1f));
-            EditorGUI.LabelField(rect, message, EditorStyles.centeredGreyMiniLabel);
+            RequestPreviewRepaint();
         }
 
         private void SetupSpritePreview(Sprite sprite)
@@ -2365,7 +2445,7 @@ namespace PrefabPreviewer
                 && _assetPreviewSourceInstanceId != 0
                 && AssetPreview.IsLoadingAssetPreview(_assetPreviewSourceInstanceId))
             {
-                _previewSurface?.MarkDirtyRepaint();
+                RequestPreviewRepaint();
             }
         }
 
@@ -2513,13 +2593,110 @@ namespace PrefabPreviewer
             return fileName;
         }
 
-        private sealed class PreviewSurfaceElement : ImmediateModeElement
+        private sealed class PreviewSurfaceElement : VisualElement
         {
-            public Action<Rect> drawHandler;
-
-            protected override void ImmediateRepaint()
+            public enum FitMode
             {
-                drawHandler?.Invoke(contentRect);
+                StretchToFill,
+                ScaleToFit
+            }
+
+            private Texture _texture;
+            private Rect _uv = new Rect(0f, 0f, 1f, 1f);
+            private FitMode _fitMode = FitMode.ScaleToFit;
+
+            public PreviewSurfaceElement()
+            {
+                pickingMode = PickingMode.Ignore;
+                focusable = false;
+                generateVisualContent += OnGenerateVisualContent;
+            }
+
+            public void SetFrame(Texture texture, Rect uv, FitMode fitMode)
+            {
+                if (ReferenceEquals(_texture, texture) && _uv == uv && _fitMode == fitMode)
+                {
+                    return;
+                }
+
+                _texture = texture;
+                _uv = uv;
+                _fitMode = fitMode;
+            }
+
+            public void ClearFrame()
+            {
+                if (_texture == null && _uv == new Rect(0f, 0f, 1f, 1f) && _fitMode == FitMode.ScaleToFit)
+                {
+                    return;
+                }
+
+                _texture = null;
+                _uv = new Rect(0f, 0f, 1f, 1f);
+                _fitMode = FitMode.ScaleToFit;
+            }
+
+            private void OnGenerateVisualContent(MeshGenerationContext mgc)
+            {
+                if (_texture == null)
+                {
+                    return;
+                }
+
+                var targetRect = contentRect;
+                if (_fitMode == FitMode.ScaleToFit)
+                {
+                    var sourceWidth = Mathf.Max(_texture.width * _uv.width, 1f);
+                    var sourceHeight = Mathf.Max(_texture.height * _uv.height, 1f);
+                    var sourceAspect = sourceWidth / sourceHeight;
+                    var rectAspect = targetRect.height > 0f ? targetRect.width / targetRect.height : sourceAspect;
+
+                    if (rectAspect > sourceAspect)
+                    {
+                        var width = targetRect.height * sourceAspect;
+                        targetRect = new Rect(targetRect.x + (targetRect.width - width) * 0.5f, targetRect.y, width, targetRect.height);
+                    }
+                    else
+                    {
+                        var height = targetRect.width / sourceAspect;
+                        targetRect = new Rect(targetRect.x, targetRect.y + (targetRect.height - height) * 0.5f, targetRect.width, height);
+                    }
+                }
+
+                DrawTexturedQuad(mgc, targetRect, _texture, _uv);
+            }
+
+            private static void DrawTexturedQuad(MeshGenerationContext mgc, Rect rect, Texture texture, Rect uv)
+            {
+                var mesh = mgc.Allocate(4, 6, texture);
+
+                var vertex = new Vertex
+                {
+                    tint = new Color32(255, 255, 255, 255)
+                };
+
+                vertex.position = new Vector3(rect.xMin, rect.yMin, 0f);
+                vertex.uv = new Vector2(uv.xMin, uv.yMax);
+                mesh.SetNextVertex(vertex);
+
+                vertex.position = new Vector3(rect.xMax, rect.yMin, 0f);
+                vertex.uv = new Vector2(uv.xMax, uv.yMax);
+                mesh.SetNextVertex(vertex);
+
+                vertex.position = new Vector3(rect.xMax, rect.yMax, 0f);
+                vertex.uv = new Vector2(uv.xMax, uv.yMin);
+                mesh.SetNextVertex(vertex);
+
+                vertex.position = new Vector3(rect.xMin, rect.yMax, 0f);
+                vertex.uv = new Vector2(uv.xMin, uv.yMin);
+                mesh.SetNextVertex(vertex);
+
+                mesh.SetNextIndex(0);
+                mesh.SetNextIndex(1);
+                mesh.SetNextIndex(2);
+                mesh.SetNextIndex(0);
+                mesh.SetNextIndex(2);
+                mesh.SetNextIndex(3);
             }
         }
     }
