@@ -574,7 +574,8 @@ namespace PrefabPreviewer
         private Label _previewMessageLabel;
         private string _previewMessageCached;
         private bool _previewMessageVisible;
-        private bool _previewRepaintQueued;
+        private bool _previewRepaintRequested;
+        private double _lastPreviewRepaintTime;
         private RenderTexture _prefabRenderTexture;
 
         [MenuItem(MenuPath)]
@@ -607,6 +608,7 @@ namespace PrefabPreviewer
         {
             _windowIsVisible = true;
             _lastUpdateTime = EditorApplication.timeSinceStartup;
+            RequestPreviewRepaint();
         }
 
         private void OnBecameInvisible()
@@ -897,25 +899,15 @@ namespace PrefabPreviewer
             _previewMessageVisible = true;
         }
 
+        private double GetPreviewIntervalSeconds(double now)
+        {
+            _ = now;
+            return 1.0 / 30.0;
+        }
+
         private void RequestPreviewRepaint()
         {
-            if (_previewSurface == null || _previewRepaintQueued)
-            {
-                return;
-            }
-
-            _previewRepaintQueued = true;
-            EditorApplication.delayCall += () =>
-            {
-                _previewRepaintQueued = false;
-                if (_previewSurface == null)
-                {
-                    return;
-                }
-
-                UpdatePreviewFrame(_previewSurface.contentRect);
-                _previewSurface.MarkDirtyRepaint();
-            };
+            _previewRepaintRequested = true;
         }
 
         private void ReleasePrefabRenderTexture()
@@ -1638,55 +1630,72 @@ namespace PrefabPreviewer
                 return;
             }
 
-            var delta = (float)(now - _lastUpdateTime);
-            _lastUpdateTime = now;
-
-            switch (_displayMode)
+            var interval = GetPreviewIntervalSeconds(now);
+            var tickDue = (now - _lastUpdateTime) >= interval;
+            var delta = tickDue ? (float)(now - _lastUpdateTime) : 0f;
+            if (tickDue)
             {
-                case PreviewDisplayMode.PrefabScene when _contentType == PreviewContentType.UGUI:
-                    // UGUI 预览：检查是否有粒子系统需要更新
-                    if (_particleSystems.Count > 0 && _particlePlaying)
-                    {
-                        foreach (var ps in _particleSystems)
+                _lastUpdateTime = now;
+            }
+
+            if (tickDue)
+            {
+                switch (_displayMode)
+                {
+                    case PreviewDisplayMode.PrefabScene when _contentType == PreviewContentType.UGUI:
+                        // UGUI 预览：检查是否有粒子系统需要更新
+                        if (_particleSystems.Count > 0 && _particlePlaying)
                         {
-                            if (ps != null)
+                            foreach (var ps in _particleSystems)
+                            {
+                                if (ps != null)
+                                {
+                                    ps.Simulate(delta, true, false, true);
+                                }
+                            }
+
+                            _previewRepaintRequested = true;
+                        }
+                        break;
+                    case PreviewDisplayMode.PrefabScene when _previewUtility != null:
+                        var needsRepaint = false;
+
+                        if (_autoRotate && _contentType != PreviewContentType.UGUI)
+                        {
+                            _orbitAngles.y += delta * 15f;
+                            needsRepaint = true;
+                        }
+
+                        if (_contentType == PreviewContentType.Particle && _particlePlaying)
+                        {
+                            foreach (var ps in _particleSystems)
                             {
                                 ps.Simulate(delta, true, false, true);
                             }
+
+                            needsRepaint = true;
                         }
-                        RequestPreviewRepaint();
-                    }
-                    break;
-                case PreviewDisplayMode.PrefabScene when _previewUtility != null:
-                    var needsRepaint = false;
 
-                    if (_autoRotate && _contentType != PreviewContentType.UGUI)
-                    {
-                        _orbitAngles.y += delta * 15f;
-                        needsRepaint = true;
-                    }
-
-                    if (_contentType == PreviewContentType.Particle && _particlePlaying)
-                    {
-                        foreach (var ps in _particleSystems)
+                        if (needsRepaint)
                         {
-                            ps.Simulate(delta, true, false, true);
+                            _previewRepaintRequested = true;
                         }
+                        break;
+                    case PreviewDisplayMode.AssetPreview:
+                        if (UpdateAssetPreviewTexture())
+                        {
+                            _previewRepaintRequested = true;
+                        }
+                        break;
+                }
+            }
 
-                        needsRepaint = true;
-                    }
-
-                    if (needsRepaint)
-                    {
-                        RequestPreviewRepaint();
-                    }
-                    break;
-                case PreviewDisplayMode.AssetPreview:
-                    if (UpdateAssetPreviewTexture())
-                    {
-                        RequestPreviewRepaint();
-                    }
-                    break;
+            if (_previewRepaintRequested && _previewSurface != null && (now - _lastPreviewRepaintTime) >= interval)
+            {
+                _previewRepaintRequested = false;
+                _lastPreviewRepaintTime = now;
+                UpdatePreviewFrame(_previewSurface.contentRect);
+                _previewSurface.MarkDirtyRepaint();
             }
         }
 
