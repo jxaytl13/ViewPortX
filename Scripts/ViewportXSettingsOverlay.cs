@@ -1,5 +1,7 @@
 #if UNITY_EDITOR
 using System;
+using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -69,6 +71,14 @@ namespace PrefabPreviewer
         private readonly string _toolIntroductionEn;
 
         private bool _isChinese;
+
+        private readonly List<VisualElement> _contentEnterTargets = new List<VisualElement>();
+        private readonly List<IVisualElementScheduledItem> _contentEnterAnimItems = new List<IVisualElementScheduledItem>();
+
+        private const float ContentEnterOffsetY = 6f;
+        private const float ContentEnterDurationSeconds = 0.2f;
+        private const int ContentEnterStaggerMs = 10;
+        private const int MaxContentEnterAnimatedItems = 30;
 
         private const float LanguageDropdownWidth = 200f;
 
@@ -208,11 +218,20 @@ namespace PrefabPreviewer
 
             // 组装
             _dialogRoot.Add(_versionLabel);
+            _contentEnterTargets.Add(_versionLabel);
             _dialogRoot.Add(_authorLabel);
+            _contentEnterTargets.Add(_authorLabel);
             _dialogRoot.Add(_authorLinkButton);
+            _contentEnterTargets.Add(_authorLinkButton);
             _dialogRoot.Add(_documentLinkButton);
+            _contentEnterTargets.Add(_documentLinkButton);
             _dialogRoot.Add(languageRow);
+            _contentEnterTargets.Add(languageRow);
             _dialogRoot.Add(scroll);
+            _contentEnterTargets.Add(_configTitleLabel);
+            _contentEnterTargets.Add(_configPathLabel);
+            _contentEnterTargets.Add(_toolsTitleLabel);
+            _contentEnterTargets.Add(_toolIntroductionLabel);
 
             _overlayRoot.Add(_dialogRoot);
 
@@ -227,6 +246,7 @@ namespace PrefabPreviewer
         {
             _overlayRoot.style.display = DisplayStyle.Flex;
             _overlayRoot.Focus();
+            StartContentEnterAnimation();
         }
 
         /// <summary>
@@ -234,6 +254,7 @@ namespace PrefabPreviewer
         /// </summary>
         public void Hide()
         {
+            StopContentEnterAnimation();
             _overlayRoot.style.display = DisplayStyle.None;
         }
 
@@ -254,6 +275,84 @@ namespace PrefabPreviewer
             {
                 Hide();
                 evt.StopPropagation();
+            }
+        }
+
+        private void StartContentEnterAnimation()
+        {
+            StopContentEnterAnimation(resetStyles: false);
+
+            var count = Mathf.Min(_contentEnterTargets.Count, MaxContentEnterAnimatedItems);
+            for (var i = 0; i < count; i++)
+            {
+                var element = _contentEnterTargets[i];
+                if (element == null)
+                {
+                    continue;
+                }
+
+                element.style.opacity = 0f;
+                element.style.top = ContentEnterOffsetY;
+
+                var delayMs = i * ContentEnterStaggerMs;
+                var startTime = EditorApplication.timeSinceStartup + delayMs / 1000.0;
+
+                IVisualElementScheduledItem scheduled = null;
+                scheduled = element.schedule.Execute(() =>
+                {
+                    if (element.panel == null || _overlayRoot.resolvedStyle.display == DisplayStyle.None)
+                    {
+                        scheduled?.Pause();
+                        return;
+                    }
+
+                    var t = (float)((EditorApplication.timeSinceStartup - startTime) / ContentEnterDurationSeconds);
+                    if (t <= 0f)
+                    {
+                        return;
+                    }
+
+                    t = Mathf.Clamp01(t);
+                    var eased = 1f - Mathf.Pow(1f - t, 3f);
+
+                    element.style.opacity = eased;
+                    element.style.top = Mathf.Lerp(ContentEnterOffsetY, 0f, eased);
+
+                    if (t >= 1f)
+                    {
+                        element.style.opacity = 1f;
+                        element.style.top = 0f;
+                        scheduled?.Pause();
+                    }
+                }).StartingIn(delayMs).Every(16);
+
+                _contentEnterAnimItems.Add(scheduled);
+            }
+        }
+
+        private void StopContentEnterAnimation(bool resetStyles = true)
+        {
+            for (var i = 0; i < _contentEnterAnimItems.Count; i++)
+            {
+                _contentEnterAnimItems[i]?.Pause();
+            }
+            _contentEnterAnimItems.Clear();
+
+            if (!resetStyles)
+            {
+                return;
+            }
+
+            for (var i = 0; i < _contentEnterTargets.Count; i++)
+            {
+                var element = _contentEnterTargets[i];
+                if (element == null)
+                {
+                    continue;
+                }
+
+                element.style.opacity = 1f;
+                element.style.top = 0f;
             }
         }
 
@@ -514,47 +613,72 @@ namespace PrefabPreviewer
         private static Button CreateLinkButton()
         {
             var button = new Button();
-
-            // 默认样式
-            var accent = new Color(57f / 255f, 209f / 255f, 157f / 255f, 1f);
-            var dark = new Color(20f / 255f, 20f / 255f, 20f / 255f, 1f);
-
             button.style.height = 30;
             button.style.flexShrink = 0;
             button.style.marginTop = 5;
             button.style.marginBottom = 5;
-            button.style.paddingLeft = 4;
-            button.style.paddingRight = 4;
-            button.style.paddingTop = 4;
-            button.style.paddingBottom = 4;
-            button.style.borderTopWidth = 1;
-            button.style.borderRightWidth = 1;
-            button.style.borderBottomWidth = 1;
-            button.style.borderLeftWidth = 1;
             button.style.borderTopLeftRadius = 4;
             button.style.borderTopRightRadius = 4;
             button.style.borderBottomLeftRadius = 4;
             button.style.borderBottomRightRadius = 4;
-            button.style.borderTopColor = accent;
-            button.style.borderRightColor = accent;
-            button.style.borderBottomColor = accent;
-            button.style.borderLeftColor = accent;
-            button.style.backgroundColor = new Color(0, 0, 0, 0);
-            button.style.color = accent;
+            button.style.paddingLeft = 8;
+            button.style.paddingRight = 8;
+            button.style.paddingTop = 0;
+            button.style.paddingBottom = 0;
+            button.style.unityTextAlign = TextAnchor.MiddleCenter;
+            button.style.unityFontStyleAndWeight = FontStyle.Normal;
 
-            // 简单 hover 效果（不用 USS 伪类）
-            button.RegisterCallback<MouseEnterEvent>(_ =>
-            {
-                button.style.backgroundColor = accent;
-                button.style.color = dark;
-            });
-            button.RegisterCallback<MouseLeaveEvent>(_ =>
-            {
-                button.style.backgroundColor = new Color(0, 0, 0, 0);
-                button.style.color = accent;
-            });
+            ApplyPrimaryFilledButtonColors(button);
 
             return button;
+        }
+
+        private static void ApplyPrimaryFilledButtonColors(Button button)
+        {
+            var bgNormal = new Color(57f / 255f, 209f / 255f, 157f / 255f, 1f);
+            var bgHover = Color.white;
+            var bgActive = new Color(0.92f, 0.92f, 0.92f, 1f);
+            var textColor = new Color(0f, 0f, 0f, 0.95f);
+
+            button.style.borderTopWidth = 0;
+            button.style.borderRightWidth = 0;
+            button.style.borderBottomWidth = 0;
+            button.style.borderLeftWidth = 0;
+            button.style.borderTopColor = Color.clear;
+            button.style.borderRightColor = Color.clear;
+            button.style.borderBottomColor = Color.clear;
+            button.style.borderLeftColor = Color.clear;
+
+            button.style.backgroundColor = bgNormal;
+            button.style.color = textColor;
+
+            bool pressed = false;
+
+            button.RegisterCallback<MouseEnterEvent>(_ =>
+            {
+                if (pressed) return;
+                button.style.backgroundColor = bgHover;
+            });
+
+            button.RegisterCallback<MouseLeaveEvent>(_ =>
+            {
+                pressed = false;
+                button.style.backgroundColor = bgNormal;
+            });
+
+            button.RegisterCallback<MouseDownEvent>(evt =>
+            {
+                if (evt.button != 0) return;
+                pressed = true;
+                button.style.backgroundColor = bgActive;
+            });
+
+            button.RegisterCallback<MouseUpEvent>(evt =>
+            {
+                if (evt.button != 0) return;
+                pressed = false;
+                button.style.backgroundColor = bgHover;
+            });
         }
     }
 }
