@@ -310,7 +310,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: -100, y: -100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1298470624
 MonoBehaviour:
@@ -334,63 +334,33 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
-    m_FontSize: 14
+    m_FontSize: 40
     m_FontStyle: 0
     m_BestFit: 0
-    m_MinSize: 10
-    m_MaxSize: 40
+    m_MinSize: 4
+    m_MaxSize: 47
     m_Alignment: 0
     m_AlignByGeometry: 0
     m_RichText: 1
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 1
     m_LineSpacing: 1
-  m_Text: "# ViewPortX (Unity Editor Tool) \u2013 Offline Documentation\r\n\r\n##
-    1. Table of Contents\r\n\r\n1. Overview  \r\n2. Requirements  \r\n3. Installation 
-    \r\n4. Quick Start  \r\n5. Controls & UI Reference  \r\n6. Settings & Data Storage 
-    \r\n7. File Layout (UXML/USS & Icons)  \r\n8. Troubleshooting  \r\n9. Contact
-    / Support  \r\n\r\n## 2. Overview\r\n\r\nViewPortX is a Unity Editor window for
-    quickly previewing selected assets in a dedicated viewport (models, prefabs,
-    and particles), with common navigation controls such as orbit, pan, zoom, framing,
-    grid, lighting, and projection toggle.\r\n\r\nNo runtime components are required.
-    This tool is intended for the Unity Editor only.\r\n\r\n## 3. Requirements\r\n\r\n-
-    Unity 2021.3 LTS or newer (Editor tool)\r\n- Works in the Editor (Mono). No IL2CPP/runtime
-    player integration is required.\r\n\r\n## 4. Installation\r\n\r\n1. Import the
-    package into your Unity project.\r\n2. Ensure the folder structure is preserved
-    (see \u201CFile Layout\u201D below).\r\n3. Open the window via the menu:\r\n  
-    - `Window/T\xB7L Nexus/ViewPortX`\r\n\r\n## 5. Quick Start\r\n\r\n1. Open `ViewPortX`
-    from the menu.\r\n2. Select a prefab/model/particle asset in the Project window.\r\n3.
-    The window updates the preview automatically (you can also use the refresh button
-    if available).\r\n4. Use the toolbar buttons to toggle grid, lighting, projection,
-    auto-rotate, and to frame/reset the view.\r\n\r\n## 6. Controls & UI Reference\r\n\r\nThe
-    exact controls can vary slightly by Unity version and platform, but the window
-    generally provides:\r\n\r\n1. Selection info (current selection name/status)\r\n2.
-    Preview area (renders the selected content)\r\n3. Toolbar buttons for:\r\n  
-    - Play/Pause particles\r\n   - Restart particles\r\n   - Grid visibility\r\n  
-    - Auto rotate\r\n   - Lighting on/off\r\n   - Perspective/Orthographic toggle\r\n  
-    - Refresh selection\r\n   - Reset view\r\n   - View axis shortcuts (X/Y/Z)\r\n  
-    - Frame view / focus\r\n   - Settings\r\n\r\n## 7. Settings & Data Storage\r\n\r\nViewPortX
-    stores user preferences under the project `Library` folder (per-project):\r\n\r\n-
-    Folder: `Library/ViewPortX`\r\n- File: `ViewPortXConfig.json`\r\n\r\nDeleting
-    the file resets settings to defaults.\r\n\r\n## 8. File Layout (UXML/USS & Icons)\r\n\r\nViewPortX
-    uses UI Toolkit assets (UXML/USS) and toolbar icon textures.\r\n\r\nTo avoid
-    missing UI at runtime, keep these files (and their `.meta` files) together as
-    shipped:\r\n\r\n- `UI/ViewPortXWindow.uxml`\r\n- `UI/ViewPortXWindow.uss`\r\n-
-    Icon textures referenced by the window (located next to the UXML/USS in the UI
-    directory)\r\n\r\nIf you move or rename UI files, Unity GUIDs will change and
-    the window may show \u201CMissing UXML/USS\u201D.\r\n\r\n## 9. Troubleshooting\r\n\r\n1.
-    The window opens but is blank  \r\n   - Check the Console for errors.\r\n   -
-    Ensure `UI/ViewPortXWindow.uxml` and `UI/ViewPortXWindow.uss` exist and their
-    `.meta` files were not regenerated.\r\n   - If you are using an obfuscated DLL,
-    make sure the UI build is not dependent on a renamed `CreateGUI()` method (this
-    package avoids relying on `CreateGUI()` as the only entry point).\r\n\r\n2. \u201CMissing
-    UXML/USS\u201D message inside the window  \r\n   - The UI assets are missing
-    or their GUID/path mapping changed. Restore the original UI files and `.meta`.\r\n\r\n3.
-    Icons are missing in the toolbar  \r\n   - Ensure the icon textures are present
-    in the same directory as the UXML file.\r\n\r\n## 10. Contact / Support\r\n\r\nIf
-    you need help, include the following in your report:\r\n\r\n1. Unity version
-    (e.g. 2021.3.x)\r\n2. OS (Windows/macOS)\r\n3. Console error stack trace (if
-    any)\r\n4. A screenshot of the ViewPortX window\r\n\r\n"
+  m_Text: "Multi-asset preview: A single EditorWindow loads Prefabs, 3D models, particle
+    systems, and UGUI layouts with automatic perspective/orthographic cameras and
+    canvas scaling.\r\nFull navigation controls: Orbit rotation, pan, scroll zoom,
+    X/Y/Z axis snaps, free view, frame selection, and perspective/orthographic toggles.\r\nDisplay
+    helpers: One-click grid and directional lighting switches to inspect proportions,
+    normals, and materials, with persisted preferences.\r\nParticle toolkit: Play/pause/restart
+    controls plus optional auto-rotation let you validate looping or one-shot effects
+    without entering Play Mode.\r\nStatus feedback: The status bar surfaces messages
+    like \u201CNo asset selected,\u201D \u201CGenerating preview,\u201D or \u201CType
+    unavailable\u201D for faster troubleshooting.\r\nBilingual UI: Every tooltip,
+    button, and setting supports instant Chinese/English switching, with the selection
+    stored on disk.\r\nSettings overlay: A reusable overlay shows version and author
+    info, links to documentation, reveals the config path, and exposes language/preference
+    toggles.\r\nPreference persistence: Language, grid, lighting, and view parameters
+    are saved so ViewportX reopens exactly as you left it.\r\nMinimum version: Compatible
+    with Unity 2021.3 or newer"
 --- !u!222 &1298470625
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -588,6 +558,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2060107757}
   - component: {fileID: 2060107756}
+  - component: {fileID: 2060107758}
   m_Layer: 0
   m_Name: Directional Light
   m_TagString: Untagged
@@ -672,3 +643,23 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!114 &2060107758
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2060107755}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Version: 1
+  m_UsePipelineSettings: 1
+  m_AdditionalLightsShadowResolutionTier: 2
+  m_LightLayerMask: 1
+  m_CustomShadowLayers: 0
+  m_ShadowLayerMask: 1
+  m_LightCookieSize: {x: 1, y: 1}
+  m_LightCookieOffset: {x: 0, y: 0}
